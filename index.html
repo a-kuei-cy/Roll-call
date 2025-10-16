@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>校園點名系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        success: '#52C41A',
+                        warning: '#FAAD14',
+                        danger: '#FF4D4F',
+                        dark: '#1D2129',
+                        light: '#F2F3F5'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+            .transition-all-300 {
+                transition: all 300ms ease-in-out;
+            }
+            .pulse-animation {
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            @keyframes pulse {
+                0%, 100% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.5;
+                }
+            }
+            .slide-in {
+                animation: slideIn 300ms ease-out forwards;
+            }
+            @keyframes slideIn {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            .fade-in {
+                animation: fadeIn 300ms ease-out forwards;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-dark min-h-screen flex flex-col">
+    <div id="login-page" class="flex-grow flex items-center justify-center p-4 fade-in">
+        <div class="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                        <i class="fa fa-graduation-cap text-primary text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-dark">校園點名系統</h1>
+                    <p class="text-gray-500 mt-2">請登錄以繼續</p>
+                </div>
+                
+                <form id="login-form">
+                    <div class="mb-6">
+                        <label for="login-role" class="block text-gray-700 mb-2">用戶角色</label>
+                        <div class="flex border rounded-lg overflow-hidden">
+                            <button type="button" class="role-option flex-1 py-3 px-4 bg-primary text-white" data-role="admin">
+                                管理員
+                            </button>
+                            <button type="button" class="role-option flex-1 py-3 px-4 bg-gray-100 text-gray-600" data-role="student">
+                                學生
+                            </button>
+                        </div>
+                        <input type="hidden" id="selected-role" value="admin">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="username" class="block text-gray-700 mb-2">賬號</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa fa-user text-gray-400"></i>
+                            </div>
+                            <input type="text" id="username" placeholder="請輸入賬號" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label for="password" class="block text-gray-700 mb-2">密碼</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa fa-lock text-gray-400"></i>
+                            </div>
+                            <input type="password" id="password" placeholder="請輸入密碼" class="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                                <i class="fa fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-all-300 shadow-sm hover:shadow flex items-center justify-center">
+                        <i class="fa fa-sign-in mr-2"></i> 登錄
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <a href="#" id="forgot-password" class="text-primary hover:text-primary/80 text-sm">忘記密碼?</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-page" class="hidden flex flex-col h-screen">
+        <header class="bg-white shadow-sm z-30">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa fa-cogs text-primary text-2xl"></i>
+                    <h1 class="text-xl font-bold text-primary">管理員中心</h1>
+                </div>
+                
+                <div class="flex items-center space-x-6">
+                    <div class="hidden md:flex items-center space-x-1 text-gray-600">
+                        <i class="fa fa-calendar-o"></i>
+                        <span id="admin-current-date">2023年9月1日</span>
+                    </div>
+                    
+                    <div class="relative">
+                        <button id="admin-notifications" class="p-2 rounded-full hover:bg-gray-100 transition-all relative">
+                            <i class="fa fa-bell-o text-gray-600"></i>
+                            <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full"></span>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <i class="fa fa-user"></i>
+                        </div>
+                        <span id="admin-username" class="hidden md:inline">管理員</span>
+                        <button id="admin-logout" class="text-gray-500 hover:text-danger transition-all">
+                            <i class="fa fa-sign-out"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow flex overflow-hidden">
+            <aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 hidden md:block overflow-y-auto">
+                <nav class="p-4">
+                    <div class="space-y-1">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">主要功能</p>
+                        <a href="#" class="admin-nav-link flex items-center px-3 py-3 text-primary bg-primary/5 rounded-lg">
+                            <i class="fa fa-tachometer w-6"></i>
+                            <span class="ml-3">控制台</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-all-300">
+                            <i class="fa fa-users w-6"></i>
+                            <span class="ml-3">班級管理</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-all-300">
+                            <i class="fa fa-user-o w-6"></i>
+                            <span class="ml-3">學生管理</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-all-300">
+                            <i class="fa fa-list-alt w-6"></i>
+                            <span class="ml-3">點名記錄</span>
+                        </a>
+                    </div>
+                    
+                    <div class="mt-8 space-y-1">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">系統設置</p>
+                        <a href="#" class="admin-nav-link flex items-center px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-all-300">
+                            <i class="fa fa-user-circle-o w-6"></i>
+                            <span class="ml-3">賬號管理</span>
+                        </a>
+                        <a href="#" class="admin-nav-link flex items-center px-3 py-3 text-gray-600 hover:bg-gray-50 rounded-lg transition-all-300">
+                            <i class="fa fa-cog w-6"></i>
+                            <span class="ml-3">系統設置</span>
+                        </a>
+                    </div>
+                </nav>
+            </aside>
+
+            <div class="flex-grow overflow-y-auto bg-gray-50 p-6">
+                <div id="admin-dashboard" class="admin-content slide-in">
+                    <div class="mb-6">
+                        <h2 class="text-2xl font-bold">控制台</h2>
+                        <p class="text-gray-600 mt-1">歡迎回來，管理員。以下是系統概覽。</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white rounded-lg shadow-sm p-6 transform hover:shadow-md transition-all-300 border-l-4 border-primary">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-500 text-sm">總班級數</p>
+                                    <h3 id="admin-total-classes" class="text-3xl font-bold mt-1">0</h3>
+                                </div>
+                                <div class="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                                    <i class="fa fa-building text-primary text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-sm p-6 transform hover:shadow-md transition-all-300 border-l-4 border-success">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-500 text-sm">總學生數</p>
+                                    <h3 id="admin-total-students" class="text-3xl font-bold mt-1">0</h3>
+                                </div>
+                                <div class="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center">
+                                    <i class="fa fa-users text-success text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-sm p-6 transform hover:shadow-md transition-all-300 border-l-4 border-warning">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-500 text-sm">今日點名次數</p>
+                                    <h3 id="admin-today-attendances" class="text-3xl font-bold mt-1">0</h3>
+                                </div>
+                                <div class="w-12 h-12 bg-warning/10 rounded-full flex items-center justify-center">
+                                    <i class="fa fa-check-square-o text-warning text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold mb-4">班級點名統計</h3>
+                            <div class="h-64">
+                                <canvas id="admin-classes-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-lg font-semibold mb-4">最近活動</h3>
+                            <div class="space-y-4" id="admin-recent-activities">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="admin-classes" class="admin-content hidden">
+                    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold">班級管理</h2>
+                            <p class="text-gray-600 mt-1">管理所有班級信息，可新增、編輯和刪除班級。</p>
+                        </div>
+                        <button id="add-new-class" class="mt-4 md:mt-0 bg-success hover:bg-success/90 text-white px-4 py-2 rounded-lg flex items-center transition-all-300">
+                            <i class="fa fa-plus mr-2"></i> 新增班級
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="relative max-w-md">
+                                <input type="text" id="search-classes" placeholder="搜尋班級..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary w-full">
+                                <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">班級名稱</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">課程名稱</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">學生人數</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">上課時間</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tr-lg">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="classes-table-body" class="bg-white divide-y divide-gray-200">
+                                    </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="p-6 border-t border-gray-200">
+                            <div class="text-sm text-gray-600">
+                                顯示 <span id="classes-showing-range">1-10</span> 個班級，共 <span id="total-classes-count">0</span> 個
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="admin-students" class="admin-content hidden">
+                    <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold">學生管理</h2>
+                            <p class="text-gray-600 mt-1">管理所有學生信息，可新增、編輯和刪除學生。</p>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex space-x-3">
+                            <div class="relative">
+                                <select id="filter-students-by-class" class="pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary appearance-none">
+                                    <option value="">所有班級</option>
+                                    </select>
+                                <i class="fa fa-building absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                                <i class="fa fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                            </div>
+                            <button id="add-new-student" class="bg-success hover:bg-success/90 text-white px-4 py-2 rounded-lg flex items-center transition-all-300">
+                                <i class="fa fa-plus mr-2"></i> 新增學生
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="relative max-w-md">
+                                <input type="text" id="search-students" placeholder="搜尋學生..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary w-full">
+                                <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">學號</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">姓名</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">班級</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                        <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body" class="bg-white divide-y divide-gray-200">
+                                    </tbody>
+                            </table>
+                        </div>
+                         <div class="p-6 border-t border-gray-200">
+                            <div class="text-sm text-gray-600">
+                                顯示 <span id="students-showing-range">1-10</span> 個學生，共 <span id="total-students-count">0</span> 個
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 等待整個HTML文檔加載完成後再執行腳本，這是一個好的實踐習慣
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- 頁面元素獲取 ---
+            // 獲取登錄頁面和管理員頁面的主要容器
+            const loginPage = document.getElementById('login-page');
+            const adminPage = document.getElementById('admin-page');
+            
+            // 獲取登錄表單相關的元素
+            const loginForm = document.getElementById('login-form');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const selectedRoleInput = document.getElementById('selected-role');
+            const roleOptions = document.querySelectorAll('.role-option');
+            const togglePassword = document.getElementById('toggle-password');
+
+
+            // --- 功能 1: 用戶角色切換 ---
+            // 遍歷「管理員」和「學生」兩個按鈕
+            roleOptions.forEach(button => {
+                button.addEventListener('click', () => {
+                    // 移除所有按鈕的選中樣式
+                    roleOptions.forEach(btn => {
+                        btn.classList.remove('bg-primary', 'text-white');
+                        btn.classList.add('bg-gray-100', 'text-gray-600');
+                    });
+                    
+                    // 為被點擊的按鈕添加選中樣式
+                    button.classList.add('bg-primary', 'text-white');
+                    button.classList.remove('bg-gray-100', 'text-gray-600');
+                    
+                    // 更新隱藏的input欄位的值，用於表單提交時判斷角色
+                    selectedRoleInput.value = button.dataset.role;
+                });
+            });
+
+            // --- 功能 2: 密碼可見性切換 ---
+            // 為密碼欄位右邊的「眼睛」圖標添加點擊事件
+            togglePassword.addEventListener('click', () => {
+                const icon = togglePassword.querySelector('i');
+                // 如果當前是密碼類型(看不見)，就切換為文本類型(看得見)
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                } else {
+                    // 否則，切換回密碼類型
+                    passwordInput.type = 'password';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                }
+            });
+
+            // --- 功能 3: 登錄表單提交處理 (核心邏輯) ---
+            // 為登錄表單添加提交事件監聽器
+            loginForm.addEventListener('submit', function (event) {
+                // 防止表單的默認提交行為 (即刷新頁面)
+                event.preventDefault(); 
+                
+                // 從輸入框中獲取用戶名、密碼和選擇的角色
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                const role = selectedRoleInput.value;
+
+                // 檢查是否為管理員角色，且用戶名和密碼是否正確
+                if (role === 'admin' && username === 'admin' && password === 'admin123') {
+                    // 登錄成功
+                    console.log('管理員登錄成功！');
+                    
+                    // 隱藏登錄頁面
+                    loginPage.classList.add('hidden');
+                    // 顯示管理員頁面
+                    adminPage.classList.remove('hidden');
+
+                    // (可選) 可以在這裡設置管理員頁面的用戶名
+                    document.getElementById('admin-username').textContent = username;
+
+                } else if (role === 'student') {
+                    // 學生登錄邏輯 (暫時未實現)
+                    alert('學生登錄功能尚未開放！');
+
+                } else {
+                    // 登錄失敗
+                    alert('賬號或密碼錯誤！');
+                }
+            });
+
+             // --- 功能 4: 管理員登出 ---
+             const adminLogoutButton = document.getElementById('admin-logout');
+             if(adminLogoutButton) {
+                adminLogoutButton.addEventListener('click', function() {
+                    // 簡單的登出邏輯：重新顯示登錄頁面，隱藏管理員頁面
+                    adminPage.classList.add('hidden');
+                    loginPage.classList.remove('hidden');
+
+                    // 清空輸入框內容
+                    usernameInput.value = '';
+                    passwordInput.value = '';
+                });
+             }
+
+        });
+    </script>
+    </body>
+</html>
